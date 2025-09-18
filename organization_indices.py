@@ -138,8 +138,8 @@ def _compute_neighbor_distances(base_pt, all_ids_base, all_pts, all_ids, dxy):
     final_ids = selected_ids[first_idx]
 
     #Values and components of the distances between the base points and all its neighbors 
-    unique_dists = dists[final_ids]
-    unique_delta_xy = delta_xy[final_ids]
+    unique_dists = np.sort(dists[final_ids])
+    unique_delta_xy = np.sort(delta_xy[final_ids])
 
     return unique_dists, unique_delta_xy
     
@@ -210,6 +210,7 @@ def _compute_neighbor_stats(centroids, all_pts, all_ids, dxy, rmax, bins, period
         
         #Storage of nearest-neighbor distances
         NNdist[k] = unique_dists[0]
+        
         
         if binomial_discrete:
             cum_hist = _compute_binomial_cumulative_histogram(unique_delta_xy, dxy, rmax, bins, base_pt, domain_x, domain_y, periodic_BCs, periodic_zonal, edge_mode)
