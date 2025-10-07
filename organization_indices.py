@@ -5,7 +5,7 @@ from scipy.ndimage import label, center_of_mass
 #The following routines compute the theoretical and observed Besag's L-functions given a 2D binary field of convective/non-convective points and provide the cloud-to-cloud nearest-neighbor distances for the computation of L_org/dL_org and I_org/RI_org.
 #Input and output parameters of the main routine _compute_organization_indices:
 
-#	INPUT PARAMETERS
+#	INPUT PARAMETERS (via dictionary)
 #		dxy						grid resolution (assumed to be uniform in both directions)
 #		cnv_idx					2D binary matrix, =1 in convective points, =0 elsewhere. The Python object class must be numpy.ndarray
 #		rmax					maximum search radius (box size in the discrete case) for the neighbor counting (check documentation for details)
@@ -17,7 +17,7 @@ from scipy.ndimage import label, center_of_mass
 #		binomial_discrete		flag for the assumption of discrete binomial model as a reference for spatial randomness (True, False otherwise)
 #		edge_mode				In case of open domains, this specifies the edge correction method to compensate the undercount bias (options 'none', 'besag', see manuscript and documentation for details, 'besag' only if binomial_discrete is True)
 
-#	OUTPUT PARAMETERS
+#	OUTPUT PARAMETERS (via dictionary)
 #		I_org				value of the I_org index as originally introduced by Tompkins and Semie (2017)
 #		RI_org				value of the RI_org index (i.e., RI_org = I_org - 0.5)
 #		L_org				value of the L_org/dL_org index (depends on whether continuous domains or discrete grids are considered)
@@ -326,8 +326,8 @@ def _compute_indices(ncnv, NNdist, Besag_obs, Besag_theor, bins, domain_x, domai
     
     return I_org, RI_org, L_org, NNCDF_theor, NNCDF_obs
 
-##MAIN ROUTINE
-def _compute_organization_indices(dxy, cnv_idx, rmax, bins, periodic_BCs, periodic_zonal, clustering_algo, binomial_continuous, binomial_discrete, edge_mode):
+##MAIN ROUTINES
+def _compute_organization(dxy, cnv_idx, rmax, bins, periodic_BCs, periodic_zonal, clustering_algo, binomial_continuous, binomial_discrete, edge_mode):
     _check_input(cnv_idx, periodic_BCs, periodic_zonal, binomial_continuous, binomial_discrete)
     nx, ny, domain_x, domain_y = _get_domain_dimensions(dxy, cnv_idx)
     centroids,ncnv = _get_centroids(cnv_idx, periodic_BCs, periodic_zonal, clustering_algo)
@@ -336,4 +336,41 @@ def _compute_organization_indices(dxy, cnv_idx, rmax, bins, periodic_BCs, period
     Besag_theor, Besag_obs=_compute_L_functions(cum_count, bins, rmax, domain_x, domain_y, ncnv, nx, ny, periodic_BCs, periodic_zonal, binomial_continuous, binomial_discrete)
     I_org, RI_org, L_org, NNCDF_theor, NNCDF_obs=_compute_indices(ncnv, NNdist, Besag_obs, Besag_theor, bins, domain_x, domain_y, dxy, periodic_BCs, rmax)
     
-    return I_org, RI_org, L_org, NNCDF_theor, NNCDF_obs, Besag_theor, Besag_obs
+    return {"I_org": I_org, "RI_org": RI_org, "L_org": L_org, "NNCDF_theor": NNCDF_theor, "NNCDF_obs": NNCDF_obs, "Besag_theor": Besag_theor, "Besag_obs": Besag_obs}
+
+def _compute_organization_indices(params:dict):
+    defaults = {
+        "dxy": None,
+        "cnv_idx": None,
+        "rmax": None,
+        "bins": None,
+        "periodic_BCs": False,
+        "periodic_zonal": False,
+        "clustering_algo": False,
+        "binomial_continuous": False,
+        "binomial_discrete": True,
+        "edge_mode": 'besag'
+    }
+
+    full_params = {**defaults, **params}
+
+    if full_params["dxy"] is None:
+        full_params["dxy"] = 1e3
+    if full_params["cnv_idx"] is None:
+        full_params["cnv_idx"] = np.random.choice([0, 1], size=(50, 50), p=[0.99, 0.01])
+    if full_params["rmax"] is None:
+        full_params["rmax"] = 100e3
+    if full_params["bins"] is None:
+        full_params["bins"] = np.arange(0, 100e3, 1e3)
+
+    return _compute_organization(dxy=full_params["dxy"], 
+                                 cnv_idx=full_params["cnv_idx"], 
+                                 rmax=full_params["rmax"], 
+                                 bins=full_params["bins"],
+                                 periodic_BCs=full_params["periodic_BCs"],
+                                 periodic_zonal=full_params["periodic_zonal"],
+                                 clustering_algo=full_params["clustering_algo"],
+                                 binomial_continuous=full_params["binomial_continuous"],
+                                 binomial_discrete=full_params["binomial_discrete"],
+                                 edge_mode=full_params["edge_mode"]
+                                )
